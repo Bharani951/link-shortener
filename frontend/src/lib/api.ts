@@ -1,6 +1,21 @@
 // Where the Spring Boot API lives. Override it with a .env file (VITE_API_URL=...).
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
+// ---------- Types: the shape of the JSON our backend sends ----------
+
+export type LinkItem = {
+  code: string
+  shortUrl: string
+  longUrl: string
+  clicks: number
+  createdAt: string
+  lastAccessedAt: string | null
+}
+
+export type CreateLinkInput = {
+  url: string
+}
+
 // Spring Boot sends errors as "Problem Details" JSON (RFC 9457).
 type ProblemDetail = {
   title?: string
@@ -41,7 +56,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 // ---------- The API, one function per endpoint ----------
-
 export const api = {
   ping: () => request<{ status: string }>('/api/ping'),
+
+  createLink: (input: CreateLinkInput) =>
+    request<LinkItem>('/api/links', { method: 'POST', body: JSON.stringify(input) }),
+}
+
+// ---------- Query keys: names for cached data (TanStack Query) ----------
+
+export const linkKeys = {
+  all: ['links'] as const,
+  detail: (code: string) => ['links', code] as const,
 }
