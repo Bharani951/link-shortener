@@ -1,3 +1,4 @@
+import { queryOptions } from '@tanstack/react-query'
 // Where the Spring Boot API lives. Override it with a .env file (VITE_API_URL=...).
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
@@ -61,6 +62,13 @@ export const api = {
 
   createLink: (input: CreateLinkInput) =>
     request<LinkItem>('/api/links', { method: 'POST', body: JSON.stringify(input) }),
+
+  listLinks: () => request<LinkItem[]>('/api/links'),
+
+  deleteLink: (code: string) =>
+    request<void>(`/api/links/${encodeURIComponent(code)}`, { method: 'DELETE' }),
+
+  getLink: (code: string) => request<LinkItem>(`/api/links/${encodeURIComponent(code)}`),
 }
 
 // ---------- Query keys: names for cached data (TanStack Query) ----------
@@ -69,3 +77,14 @@ export const linkKeys = {
   all: ['links'] as const,
   detail: (code: string) => ['links', code] as const,
 }
+export const linksQueryOptions = queryOptions({
+  queryKey: linkKeys.all,
+  queryFn: api.listLinks,
+})
+
+export const linkQueryOptions = (code: string) =>
+  queryOptions({
+    queryKey: linkKeys.detail(code),
+    queryFn: () => api.getLink(code),
+    refetchInterval: 5_000, // re-ask the server every 5 s so the click count stays live
+  })

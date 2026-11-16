@@ -5,6 +5,12 @@ import java.net.URISyntaxException;
 import java.time.Instant;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
+import java.util.List;
 
 /** All the rules about links. Knows nothing about HTTP. */
 @Service
@@ -13,10 +19,12 @@ public class LinkService {
     private static final int MAX_ATTEMPTS = 5;
 
     private final LinkRepository repository;
+    private final MongoTemplate mongoTemplate;
     private final CodeGenerator codeGenerator;
 
-    public LinkService(LinkRepository repository, CodeGenerator codeGenerator) {
+    public LinkService(LinkRepository repository, MongoTemplate mongoTemplate, CodeGenerator codeGenerator) {
         this.repository = repository;
+        this.mongoTemplate = mongoTemplate;
         this.codeGenerator = codeGenerator;
     }
 
@@ -53,5 +61,37 @@ public class LinkService {
             throw new InvalidUrlException("The link needs a host, like example.com");
         }
         return url;
+    }
+        /**
+     * Finds the link AND adds one click in a single database operation.
+     * Safe when many people click at the same moment (LEARNING.md §4.5).
+     */
+    public Link resolve(String code) {
+        Query query = new Query(Criteria.where("code").is(code));
+        Update update = new Update()
+                .inc("clicks", 1)                      // MongoDB adds 1 itself: no lost clicks
+                .set("lastAccessedAt", Instant.now());
+
+        Link link = mongoTemplate.findAndModify(
+                query, update, FindAndModifyOptions.options().returnNew(true), Link.class);
+
+        if (link == null) {
+            throw new LinkNotFoundException(code);
+        }
+        return link;
+    }
+        public List<Link> list() {
+        return repository.findAllByOrderByCreatedAtDesc();
+    }
+
+    public void delete(String code) {
+        if (repository.deleteByCode(code) == 0) {
+            throw new LinkNotFoundException(code);
+        }
+    }
+
+    public Link get(String code) {
+        return repository.findByCode(code)
+                .orElseThrow(() -> new LinkNotFoundException(code));
     }
 }

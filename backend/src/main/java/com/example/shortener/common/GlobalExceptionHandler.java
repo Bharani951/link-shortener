@@ -8,6 +8,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import com.example.shortener.link.LinkNotFoundException;
 
 /** Turns exceptions thrown anywhere into clean JSON error responses. */
 @RestControllerAdvice
@@ -30,6 +31,13 @@ public class GlobalExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Some fields are invalid");
         problem.setTitle("Validation failed");
         problem.setProperty("errors", errors);
+        return problem;
+    }
+    /** Thrown when a link is not found. */
+    @ExceptionHandler(LinkNotFoundException.class)
+    public ProblemDetail handleNotFound(LinkNotFoundException e) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+        problem.setTitle("Link not found");
         return problem;
     }
 }
