@@ -1,19 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 
+/** The small pill in the header that says whether Spring Boot is reachable. */
 export function BackendStatus() {
-  const { data, isPending, isError } = useQuery({
+  const { isPending, isError } = useQuery({
     queryKey: ["ping"],
     queryFn: api.ping,
     retry: false, // fail fast so we see problems immediately
+    refetchInterval: 15_000, // re-check every 15 s, so the pill recovers by itself
   });
 
-  if (isPending) return <p className="status">Checking backend…</p>;
-  if (isError)
+  if (isPending) return <span className="status">Checking backend…</span>;
+  if (isError) {
     return (
-      <p className="status error">
-        Backend unreachable. Is Spring Boot running?
-      </p>
+      <span className="status down" role="status">
+        Backend offline
+      </span>
     );
-  return <p className="status ok">Backend: {data.status}</p>;
+  }
+  return <span className="status ok">Backend online</span>;
 }

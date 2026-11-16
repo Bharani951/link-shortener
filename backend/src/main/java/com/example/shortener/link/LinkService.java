@@ -1,5 +1,6 @@
 package com.example.shortener.link;
 
+import com.example.shortener.config.AppProperties;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
@@ -13,6 +14,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
+
 /** All the rules about links. Knows nothing about HTTP. */
 @Service
 public class LinkService {
@@ -22,11 +24,14 @@ public class LinkService {
     private final LinkRepository repository;
     private final MongoTemplate mongoTemplate;
     private final CodeGenerator codeGenerator;
+    private final AppProperties app;
 
-    public LinkService(LinkRepository repository, MongoTemplate mongoTemplate, CodeGenerator codeGenerator) {
+    public LinkService(LinkRepository repository, MongoTemplate mongoTemplate,
+                       CodeGenerator codeGenerator, AppProperties app) {
         this.repository = repository;
         this.mongoTemplate = mongoTemplate;
         this.codeGenerator = codeGenerator;
+        this.app = app;
     }
 
     public Link create(String rawUrl, Integer expiresInDays) {
@@ -100,6 +105,10 @@ public class LinkService {
         }
         if (url.getHost() == null || url.getHost().isBlank()) {
             throw new InvalidUrlException("The link needs a host, like example.com");
+        }
+        String ownHost = URI.create(app.baseUrl()).getHost();
+        if (url.getHost().equalsIgnoreCase(ownHost)) {
+            throw new InvalidUrlException("You can't shorten a link that points to this shortener");
         }
         return url;
     }

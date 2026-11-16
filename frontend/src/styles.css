@@ -1,16 +1,1092 @@
+/* =========================================================================
+   Link Shortener — design system
+   1. Fonts        2. Tokens (light + dark)   3. Base
+   4. Layout       5. Header                  6. Buttons
+   7. Form         8. The ticket stub         9. Panels + table
+   10. Stats page  11. Messages + states      12. Fitting every screen
+   13. Reduced motion
+   ========================================================================= */
 
+/* 1. Fonts ---------------------------------------------------------------
+   Installed with npm, so they work offline (no Google Fonts request). */
+@import '@fontsource-variable/bricolage-grotesque/opsz.css';
+@import '@fontsource-variable/jetbrains-mono';
 
-* {
+/* 2. Tokens ---------------------------------------------------------------
+   Every colour, size and radius lives here. Change a token, the whole app follows. */
+:root {
+  color-scheme: light;
+
+  --bg: #edf0ea;          /* page: pale sage paper */
+  --surface: #ffffff;     /* panels and inputs */
+  --surface-2: #f5f7f3;   /* table header, hover rows */
+  --ink: #18202c;         /* main text + primary button */
+  --ink-2: #566170;       /* secondary text */
+  --line: #d3d9d0;        /* borders */
+  --stub: #f4b740;        /* the ticket stub: the one bold colour */
+  --stub-ink: #2a1e05;    /* text on the stub */
+  --focus: #2f5bea;       /* keyboard focus ring */
+  --danger: #b42318;
+  --danger-bg: #fdecea;
+  --ok: #1e7a4d;
+  --ok-bg: #e3f3ea;
+  --warn-bg: #fdf1d6;
+
+  --font: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+
+  --r-sm: 8px;    /* buttons, inputs */
+  --r-md: 14px;   /* panels */
+  --r-lg: 20px;   /* the stub */
+
+  --shadow: 0 1px 0 rgb(24 32 44 / 0.04), 0 8px 24px -12px rgb(24 32 44 / 0.18);
+
+  /* Layout tokens: they grow with the screen (see section 12) */
+  --page: 76rem;                          /* widest the content gets */
+  --gutter: clamp(1rem, 4vw, 2.5rem);     /* space at the screen edges: 16px on phones → 40px on desktops */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #11151b;
+    --surface: #181e26;
+    --surface-2: #1e252f;
+    --ink: #e7eaee;
+    --ink-2: #9aa4b2;
+    --line: #2b333e;
+    --focus: #8aa6ff;
+    --danger: #f0857a;
+    --danger-bg: #3a1d1b;
+    --ok: #5cc08d;
+    --ok-bg: #16301f;
+    --warn-bg: #3a2e12;
+    --shadow: 0 1px 0 rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.6);
+  }
+}
+
+/* 3. Base ----------------------------------------------------------------- */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+/* The base text size grows a little on big screens: 16px on phones and laptops, up to 18px on large monitors.
+   Everything sized in rem (padding, gaps, headings) scales with it. */
+html {
+  font-size: clamp(100%, 87.5% + 0.2vw, 112.5%);
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
 }
 
-main {
-  width: min(42rem, calc(100% - 2rem));
-  margin: 4rem auto;
+h1,
+h2,
+h3 {
+  line-height: 1.1;
+  margin: 0;
+  font-weight: 700;
 }
 
+h1 {
+  font-size: clamp(2.25rem, 1.6rem + 3vw, 3.5rem);
+  letter-spacing: -0.03em;
+  font-weight: 800;
+}
+
+h2 {
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.mono {
+  font-family: var(--mono);
+  font-variant-ligatures: none;
+}
+
+.muted {
+  color: var(--ink-2);
+}
+
+/* Text only screen readers can see (e.g. a label for the delete column). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* 4. Layout --------------------------------------------------------------- */
+.shell {
+  width: min(var(--page), 100% - 2 * var(--gutter));
+  margin-inline: auto;
+}
+
+.page {
+  container: page / inline-size; /* children can ask "how wide is the page?" */
+  padding-block: clamp(1.75rem, 1rem + 3vw, 3.5rem) 4rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr); /* lets wide tables scroll instead of stretching the page */
+  gap: clamp(2rem, 1.5rem + 1.5vw, 3rem);
+}
+
+.hero {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 40rem;
+}
+
+.hero p {
+  font-size: 1.125rem;
+  color: var(--ink-2);
+  max-width: 36rem;
+}
+
+/* 5. Header --------------------------------------------------------------- */
+.site-header {
+  border-bottom: 1px solid var(--line);
+}
+
+.site-header .shell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 4rem;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+/* A tiny ticket stub as the logo: same shape and colour as the result card. */
+.brand-mark {
+  width: 1.6rem;
+  height: 1.1rem;
+  border-radius: 4px;
+  background:
+    radial-gradient(circle at 0 50%, var(--bg) 0.22rem, transparent 0.24rem),
+    radial-gradient(circle at 100% 50%, var(--bg) 0.22rem, transparent 0.24rem),
+    var(--stub);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.status::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--ink-2);
+}
+
+.status.ok::before {
+  background: var(--ok);
+}
+
+.status.down {
+  color: var(--danger);
+  border-color: currentColor;
+  background: var(--danger-bg);
+}
+
+.status.down::before {
+  background: var(--danger);
+}
+
+/* 6. Buttons -------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color 120ms, border-color 120ms, transform 80ms;
+}
+
+.btn:hover {
+  border-color: var(--ink-2);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--ink) 86%, var(--bg));
+  border-color: transparent;
+}
+
+.btn-small {
+  min-height: 2.1rem;
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.btn-ghost:hover {
+  background: var(--surface-2);
+  border-color: var(--line);
+}
+
+.btn-danger {
+  color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: var(--danger-bg);
+  border-color: transparent;
+}
+
+/* Square button with only an icon inside (the delete trash can) */
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  color: var(--ink-2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background-color 120ms, color 120ms;
+}
+
+.icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.icon-btn-danger:hover:not(:disabled) {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+/* 7. Form ----------------------------------------------------------------- */
+.create {
+  container: create / inline-size; /* the form and stub adapt to this box's width */
+}
+
+.create-form {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow);
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  padding-left: 0.15rem;
+}
+
+.input,
+.select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 0.85rem;
+  font: inherit;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+
+.input {
+  font-size: 1.0625rem;
+}
+
+.input::placeholder {
+  color: color-mix(in srgb, var(--ink-2) 75%, transparent);
+}
+
+.input:focus-visible,
+.select:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 0;
+  border-color: transparent;
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.select {
+  padding-right: 2.2rem;
+  appearance: none;
+  /* Our own chevron, drawn as a tiny SVG (mid-grey, so it works in light and dark mode) */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23808a98' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 0.8rem center;
+  background-size: 12px 8px;
+  background-repeat: no-repeat;
+}
+
+/* The submit button lines up with the inputs, not with their labels. */
+.create-form .btn-primary {
+  margin-top: 1.5rem;
+  min-width: 8rem;
+}
+
+.field-error {
+  font-size: 0.875rem;
+  color: var(--danger);
+  padding-left: 0.15rem;
+}
+
+/* 8. The ticket stub (shown after creating a link) ---------------------------
+   Two parts joined by a dashed "tear here" line, with round notches cut
+   out of the top and bottom edge, like a cloakroom ticket. */
+.stub {
+  --notch: 1.1rem;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  margin-top: 1rem;
+  color: var(--stub-ink);
+  background: var(--stub);
+  border-radius: var(--r-lg);
+  animation: stub-in 380ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.stub-main {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1.25rem 1.5rem;
+  min-width: 0;
+}
+
+.stub-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.stub-link {
+  font-family: var(--mono);
+  font-size: clamp(1.15rem, 0.9rem + 1.2vw, 1.6rem);
+  line-height: 1.25;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.stub-link .base {
+  opacity: 0.6;
+}
+
+.stub-link .code {
+  font-weight: 700;
+}
+
+.stub-link:hover .code {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.stub-dest {
+  font-size: 0.875rem;
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stub-actions {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: 0.5rem;
+  padding: 1.25rem 1.5rem;
+  border-left: 2px dashed rgb(42 30 5 / 0.35);
+}
+
+/* The two round notches on the tear line */
+.stub-actions::before,
+.stub-actions::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--notch) / -2 - 1px);
+  width: var(--notch);
+  height: var(--notch);
+  border-radius: 50%;
+  background: var(--bg);
+}
+
+.stub-actions::before {
+  top: calc(var(--notch) / -2);
+}
+
+.stub-actions::after {
+  bottom: calc(var(--notch) / -2);
+}
+
+.stub .btn {
+  min-height: 2.4rem;
+  color: var(--stub-ink);
+  background: rgb(255 255 255 / 0.55);
+  border-color: rgb(42 30 5 / 0.2);
+}
+
+.stub .btn:hover {
+  background: rgb(255 255 255 / 0.85);
+}
+
+.stub .btn-dark {
+  color: var(--stub);
+  background: var(--stub-ink);
+  border-color: var(--stub-ink);
+}
+
+.stub .btn-dark:hover {
+  background: #000;
+}
+
+.stub :focus-visible {
+  outline-color: var(--stub-ink);
+}
+
+@keyframes stub-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+}
+
+/* Copy button + its "Copied" bubble ------------------------------------------
+   The bubble floats ABOVE the button (position: absolute), so the button keeps
+   its size and label and nothing on the page moves. */
+.copy-wrap {
+  position: relative;
+  display: inline-grid; /* the button fills the wrapper (full width inside the stub) */
+}
+
+.copy-tip {
+  position: absolute;
+  bottom: calc(100% + 0.6rem);
+  left: 50%;
+  translate: -50% 0;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--bg);
+  background: var(--ink);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  pointer-events: none; /* clicks go through it */
+  opacity: 0;
+  scale: 0.9;
+  transition: opacity 150ms, scale 150ms;
+}
+
+/* The little arrow pointing down at the button */
+.copy-tip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  translate: -50% 0;
+  border: 5px solid transparent;
+  border-top-color: var(--ink);
+}
+
+.copy-tip[data-show='true'] {
+  opacity: 1;
+  scale: 1;
+}
+
+/* 9. Panels + the links table --------------------------------------------- */
+.links-panel {
+  container: links / inline-size; /* the table turns into cards when this box is narrow */
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.count {
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel-body {
+  padding: 1.25rem;
+}
+
+.table-wrap {
+  position: relative; /* keeps the hidden "Actions" label inside the scroll area */
+  overflow-x: auto;
+}
+
+.links {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.links th,
+.links td {
+  padding: 0.7rem 1.25rem;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--line);
+}
+
+.links tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.links th {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  white-space: nowrap;
+}
+
+.links tbody tr:hover {
+  background: var(--surface-2);
+}
+
+/* Column-specific tweaks: each cell gets a class "col-<column id>" */
+.links .col-code a {
+  font-family: var(--mono);
+  font-weight: 700;
+  text-decoration: none;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--stub) 30%, transparent);
+}
+
+.links .col-code a:hover {
+  background: var(--stub);
+  color: var(--stub-ink);
+}
+
+.links .col-clicks {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.links .col-createdAt,
+.links .col-expiresAt {
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+
+.links .col-actions {
+  width: 1%;
+  text-align: right;
+}
+
+/* The destination column takes whatever space is left, and long URLs end in "…" */
+.links .col-longUrl {
+  width: 100%;
+  max-width: 0;
+  min-width: 9rem;
+}
+
+.truncate {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.sort:hover {
+  color: var(--ink);
+}
+
+.sort-arrow {
+  width: 0.8rem;
+  color: var(--ink);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 999px;
+  color: var(--stub-ink);
+  background: var(--warn-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  .badge {
+    color: var(--stub);
+  }
+}
+
+/* 10. Stats page ---------------------------------------------------------- */
+/* Back button: a square with only an arrow icon. Bordered and shadowed so it is easy to see,
+   44px so it is easy to tap. */
+.back {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow);
+  transition: background-color 120ms, color 120ms;
+}
+
+.back:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+
+.stats-head {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.stats-code {
+  font-family: var(--mono);
+  font-size: clamp(2rem, 1.4rem + 3vw, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.stats-dest {
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+  max-width: 48rem;
+}
+
+.stats-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: minmax(15rem, 1fr) 2fr;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.clicks-card {
+  display: grid;
+  align-content: space-between;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  color: var(--stub-ink);
+  background: var(--stub);
+  border-radius: var(--r-md);
+}
+
+.clicks-number {
+  font-size: clamp(3.5rem, 2.5rem + 5vw, 6rem);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.clicks-label {
+  font-weight: 600;
+}
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+.live::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  margin: 0;
+}
+
+.details dt,
+.details dd {
+  margin: 0;
+  padding: 0.8rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.details dt {
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+.details dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.details dt:last-of-type,
+.details dd:last-of-type {
+  border-bottom: 0;
+}
+
+.details-panel {
+  container: details / inline-size;
+}
+
+/* 11. Messages + states --------------------------------------------------- */
+.alert {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--r-sm);
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.empty {
+  display: grid;
+  justify-items: start;
+  gap: 0.35rem;
+  padding: 2.5rem 1.25rem;
+}
+
+.empty h3 {
+  font-size: 1.0625rem;
+}
+
+.skeleton {
+  height: 1rem;
+  margin: 1rem 1.25rem;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--surface-2), var(--line), var(--surface-2));
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.error-page {
+  display: grid;
+  justify-items: start;
+  gap: 1rem;
+  padding-block: 3rem;
+  max-width: 34rem;
+}
+
+.error-page p {
+  color: var(--ink-2);
+  font-size: 1.125rem;
+}
+
+/* 12. Fitting every screen -------------------------------------------------
+   Two tools:
+   - Fluid values (clamp, vw) in the sections above: sizes slide smoothly with the screen.
+   - Container queries (@container) below: each component measures the box it sits in
+     and changes its own layout. The same table works in a phone, a tablet, or a
+     narrow sidebar, without knowing anything about the screen. */
+
+/* Form: one row when there is room, stacked when narrower than 34rem (~540px) */
+@container create (max-width: 34rem) {
+  .create-form {
+    grid-template-columns: 1fr;
+  }
+
+  .create-form .btn-primary {
+    margin-top: 0;
+    width: 100%;
+  }
+
+  /* The stub stacks: the tear line runs across instead of down */
+  .stub {
+    grid-template-columns: 1fr;
+  }
+
+  .stub-actions {
+    grid-template-columns: 1fr 1fr;
+    border-left: 0;
+    border-top: 2px dashed rgb(42 30 5 / 0.35);
+  }
+
+  .stub-actions::before,
+  .stub-actions::after {
+    top: calc(var(--notch) / -2 - 1px);
+    bottom: auto;
+  }
+
+  .stub-actions::before {
+    left: calc(var(--notch) / -2);
+  }
+
+  .stub-actions::after {
+    left: auto;
+    right: calc(var(--notch) / -2);
+  }
+}
+
+/* Table → cards when the panel is narrower than 52rem (~830px).
+   Each row becomes a small card, and nothing is hidden. As many cards sit
+   side by side as fit (1 on a phone, 2 on a tablet):
+
+     [aZ3k9Q]                       128 clicks   🗑
+     baeldung.com/spring-boot-mongodb-…
+     Created Nov 13, 2026    Expires Never                              */
+@container links (max-width: 52rem) {
+  .links,
+  .links thead,
+  .links td {
+    display: block;
+  }
+
+  /* auto-fill: "fit as many 18rem-wide columns as the space allows" */
+  .links tbody {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  /* The header row becomes a "Sort by" bar */
+  .links thead tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 1rem;
+    padding: 0.6rem 1rem;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .links thead tr::before {
+    content: 'Sort by';
+    font-size: 0.8125rem;
+    color: var(--ink-2);
+  }
+
+  .links thead th {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  .links thead th.col-actions {
+    display: none;
+  }
+
+  .links tbody tr {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    grid-template-areas:
+      'code    .       clicks  actions'
+      'dest    dest    dest    dest'
+      'created expires expires expires';
+    align-items: center;
+    gap: 0.35rem 0.75rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+  }
+
+  .links td {
+    padding: 0;
+    border: 0;
+    text-align: left;
+  }
+
+  .links .col-code { grid-area: code; }
+  .links .col-clicks { grid-area: clicks; }
+  .links .col-actions { grid-area: actions; width: auto; }
+  .links .col-createdAt { grid-area: created; font-size: 0.875rem; }
+  .links .col-expiresAt { grid-area: expires; font-size: 0.875rem; }
+
+  .links .col-longUrl {
+    grid-area: dest;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .links td.col-clicks::after {
+    content: ' clicks';
+    font-weight: 400;
+    color: var(--ink-2);
+  }
+
+  /* "Created Nov 13, 2026": the label comes from data-label="Created" on the <td> */
+  .links td.col-createdAt::before,
+  .links td.col-expiresAt::before {
+    content: attr(data-label) ' ';
+    color: var(--ink-2);
+    opacity: 0.8;
+  }
+}
+
+/* Stats page: clicks card beside the details, or above them when the page is narrow */
+@container page (max-width: 48rem) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Details list: label beside value, or label above value in a narrow panel */
+@container details (max-width: 26rem) {
+  .details {
+    grid-template-columns: 1fr;
+  }
+
+  .details dt {
+    padding-bottom: 0;
+    border-bottom: 0;
+    font-size: 0.8125rem;
+  }
+
+  .details dd {
+    padding-top: 0.2rem;
+  }
+}
+
+/* Wide screens: the stats grid gives the details more room */
+@container page (min-width: 70rem) {
+  .stats-grid {
+    grid-template-columns: minmax(18rem, 1fr) 2.5fr;
+  }
+}
+
+/* 13. Reduced motion --------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

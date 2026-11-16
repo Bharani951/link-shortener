@@ -10,7 +10,13 @@ import {
   useTable,
 } from "@tanstack/react-table";
 import { api, linkKeys, linksQueryOptions, type LinkItem } from "../lib/api";
-import { formatDate } from "../lib/format";
+import {
+  formatDate,
+  formatDay,
+  hoursLeft,
+  isWithinADay,
+  prettyUrl,
+} from "../lib/format";
 
 // 1. Features: which table abilities we switch on (only sorting here).
 const features = tableFeatures({
@@ -24,9 +30,13 @@ const helper = createColumnHelper<typeof features, LinkItem>();
 
 const columns = helper.columns([
   helper.accessor("code", {
-    header: "Short code",
+    header: "Short link",
     cell: (info) => (
-      <Link to="/stats/$code" params={{ code: info.getValue() }}>
+      <Link
+        to="/stats/$code"
+        params={{ code: info.getValue() }}
+        title="View stats"
+      >
         {info.getValue()}
       </Link>
     ),
@@ -35,22 +45,22 @@ const columns = helper.columns([
     header: "Destination",
     cell: (info) => (
       <span className="truncate" title={info.getValue()}>
-        {info.getValue()}
+        {prettyUrl(info.getValue())}
       </span>
     ),
   }),
   helper.accessor("clicks", { header: "Clicks" }),
   helper.accessor("createdAt", {
     header: "Created",
-    cell: (info) => formatDate(info.getValue()),
+    cell: (info) => formatDay(info.getValue()),
   }),
   helper.accessor("expiresAt", {
     header: "Expires",
-    cell: (info) => formatDate(info.getValue(), "Never"),
-  }), // ← NEW (Slice 5)
+    cell: (info) => <ExpiryCell iso={info.getValue()} />,
+  }),
   helper.display({
     id: "actions",
-    header: "",
+    header: () => <span className="sr-only">Actions</span>,
     cell: ({ row }) => <DeleteButton code={row.original.code} />,
   }),
 ]);
@@ -62,55 +72,117 @@ export function LinksTable() {
   // Hooks must run on every render, so useTable comes before the early returns.
   const table = useTable({ features, columns, data: data ?? emptyRows });
 
-  if (isPending) return <p>Loading links…</p>;
-  if (isError)
-    return <p className="error">Could not load links: {error.message}</p>;
-  if (data.length === 0)
-    return <p>No links yet. Create your first one above.</p>;
-
   return (
-    <table className="links">
-      <thead>
-        {table.getHeaderGroups().map((group) => (
-          <tr key={group.id}>
-            {group.headers.map((header) => (
-              <th key={header.id}>
-                {header.column.getCanSort() ? (
-                  <button
-                    type="button"
-                    className="sort"
-                    onClick={header.column.getToggleSortingHandler()}
-                  >
-                    <table.FlexRender header={header} />
-                    {sortArrow(header.column.getIsSorted())}
-                  </button>
-                ) : (
-                  <table.FlexRender header={header} />
-                )}
-              </th>
-            ))}
-          </tr>
-        ))}
-      </thead>
-      <tbody>
-        {table.getRowModel().rows.map((row) => (
-          <tr key={row.id}>
-            {row.getAllCells().map((cell) => (
-              <td key={cell.id}>
-                <table.FlexRender cell={cell} />
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <section className="panel links-panel" aria-labelledby="links-title">
+      <div className="panel-head">
+        <h2 id="links-title">Your links</h2>
+        {data && data.length > 0 && (
+          <span className="count">{data.length}</span>
+        )}
+      </div>
+
+      {isPending ? (
+        <div aria-label="Loading links">
+          <div className="skeleton" />
+          <div className="skeleton" />
+          <div className="skeleton" />
+        </div>
+      ) : isError ? (
+        <div className="panel-body">
+          <p className="alert" role="alert">
+            Could not load links: {error.message}
+          </p>
+        </div>
+      ) : data.length === 0 ? (
+        <div className="empty">
+          <h3>No links yet</h3>
+          <p className="muted">
+            Shorten your first link above and it will show up here.
+          </p>
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <table className="links">
+            <thead>
+              {table.getHeaderGroups().map((group) => (
+                <tr key={group.id}>
+                  {group.headers.map((header) => {
+                    const sorted = header.column.getIsSorted();
+                    return (
+                      <th
+                        key={header.id}
+                        className={`col-${header.column.id}`}
+                        aria-sort={
+                          sorted === "asc"
+                            ? "ascending"
+                            : sorted === "desc"
+                              ? "descending"
+                              : undefined
+                        }
+                      >
+                        {header.column.getCanSort() ? (
+                          <button
+                            type="button"
+                            className="sort"
+                            onClick={header.column.getToggleSortingHandler()}
+                          >
+                            <table.FlexRender header={header} />
+                            <span className="sort-arrow" aria-hidden="true">
+                              {sortArrow(sorted)}
+                            </span>
+                          </button>
+                        ) : (
+                          <table.FlexRender header={header} />
+                        )}
+                      </th>
+                    );
+                  })}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.map((row) => (
+                <tr key={row.id}>
+                  {row.getAllCells().map((cell) => (
+                    <td
+                      key={cell.id}
+                      className={`col-${cell.column.id}`}
+                      data-label={labelOf(cell.column.columnDef.header)}
+                    >
+                      <table.FlexRender cell={cell} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
+// The column's header text ("Created"), used as a label when rows turn into cards on narrow screens.
+function labelOf(header: unknown): string | undefined {
+  return typeof header === "string" ? header : undefined;
+}
+
 function sortArrow(direction: false | "asc" | "desc"): string {
-  if (direction === "asc") return " ↑";
-  if (direction === "desc") return " ↓";
+  if (direction === "asc") return "↑";
+  if (direction === "desc") return "↓";
   return "";
+}
+
+function ExpiryCell({ iso }: { iso: string | null }) {
+  if (!iso) return <span>Never</span>;
+  // Less than a day left: show how many hours, highlighted. The exact time is in the tooltip.
+  if (isWithinADay(iso))
+    return (
+      <span className="badge" title={formatDate(iso)}>
+        {hoursLeft(iso)}
+      </span>
+    );
+  return <span title={formatDate(iso)}>{formatDay(iso)}</span>;
 }
 
 function DeleteButton({ code }: { code: string }) {
@@ -123,8 +195,10 @@ function DeleteButton({ code }: { code: string }) {
   return (
     <button
       type="button"
-      className="danger"
+      className="icon-btn icon-btn-danger"
       disabled={deleteLink.isPending}
+      aria-label={`Delete ${code}`} // what screen readers say, since there is no visible text
+      title="Delete link" // tooltip on hover
       onClick={() => {
         if (
           window.confirm(`Delete ${code}? The short link will stop working.`)
@@ -133,7 +207,29 @@ function DeleteButton({ code }: { code: string }) {
         }
       }}
     >
-      {deleteLink.isPending ? "Deleting…" : "Delete"}
+      <TrashIcon />
     </button>
+  );
+}
+
+/** A trash can drawn with SVG lines. `currentColor` = it takes the button's text colour. */
+function TrashIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 7h16" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
+      <path d="M9 7V4h6v3" />
+    </svg>
   );
 }

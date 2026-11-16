@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BackendStatus } from "../components/BackendStatus";
 import { CreateLinkForm } from "../components/CreateLinkForm";
 import { LinksTable } from "../components/LinksTable";
 
@@ -10,10 +9,14 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   return (
     <>
-      <h1>Shorten a link</h1>
-      <BackendStatus />
+      <section className="hero">
+        <h1>Make a long link short.</h1>
+        <p>
+          Paste any web address. You get a short link to share, and a count of
+          every click on it.
+        </p>
+      </section>
       <CreateLinkForm />
-      <h2>Your links</h2>
       <LinksTable />
     </>
   );
