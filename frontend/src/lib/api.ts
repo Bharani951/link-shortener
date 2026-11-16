@@ -11,10 +11,12 @@ export type LinkItem = {
   clicks: number
   createdAt: string
   lastAccessedAt: string | null
+  expiresAt: string | null
 }
 
 export type CreateLinkInput = {
   url: string
+  expiresInDays: number | null
 }
 
 // Spring Boot sends errors as "Problem Details" JSON (RFC 9457).

@@ -34,10 +34,15 @@ export function CreateLinkForm() {
   });
 
   const form = useForm({
-    defaultValues: { url: "" },
+    defaultValues: { url: "", expiresInDays: "" },
     onSubmit: async ({ value, formApi }) => {
       try {
-        await createLink.mutateAsync({ url: value.url.trim() });
+        await createLink.mutateAsync({
+          url: value.url.trim(),
+          expiresInDays: value.expiresInDays
+            ? Number(value.expiresInDays)
+            : null,
+        });
         formApi.reset();
       } catch {
         // the error is shown below from createLink.error
@@ -81,7 +86,23 @@ export function CreateLinkForm() {
             </label>
           )}
         </form.Field>
-
+        <form.Field name="expiresInDays">
+          {(field) => (
+            <label>
+              Expires
+              <select
+                name={field.name}
+                value={field.state.value}
+                onChange={(event) => field.handleChange(event.target.value)}
+              >
+                <option value="">Never</option>
+                <option value="1">In 1 day</option>
+                <option value="7">In 7 days</option>
+                <option value="30">In 30 days</option>
+              </select>
+            </label>
+          )}
+        </form.Field>
         <form.Subscribe
           selector={(state) => [state.canSubmit, state.isSubmitting] as const}
         >

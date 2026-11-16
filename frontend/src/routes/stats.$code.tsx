@@ -41,6 +41,8 @@ function StatsPage() {
         <dd>{formatDate(link.createdAt)}</dd>
         <dt>Last clicked</dt>
         <dd>{formatDate(link.lastAccessedAt, "Never")}</dd>
+        <dt>Expires</dt>
+        <dd>{formatDate(link.expiresAt, "Never")}</dd>
       </dl>
     </>
   );

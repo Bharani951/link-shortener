@@ -1,5 +1,5 @@
-import { Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import {
   createColumnHelper,
   createSortedRowModel,
@@ -23,15 +23,36 @@ const features = tableFeatures({
 const helper = createColumnHelper<typeof features, LinkItem>();
 
 const columns = helper.columns([
-    helper.accessor('code', {
-    header: 'Short code',
+  helper.accessor("code", {
+    header: "Short code",
     cell: (info) => (
       <Link to="/stats/$code" params={{ code: info.getValue() }}>
         {info.getValue()}
       </Link>
     ),
   }),
- 
+  helper.accessor("longUrl", {
+    header: "Destination",
+    cell: (info) => (
+      <span className="truncate" title={info.getValue()}>
+        {info.getValue()}
+      </span>
+    ),
+  }),
+  helper.accessor("clicks", { header: "Clicks" }),
+  helper.accessor("createdAt", {
+    header: "Created",
+    cell: (info) => formatDate(info.getValue()),
+  }),
+  helper.accessor("expiresAt", {
+    header: "Expires",
+    cell: (info) => formatDate(info.getValue(), "Never"),
+  }), // ← NEW (Slice 5)
+  helper.display({
+    id: "actions",
+    header: "",
+    cell: ({ row }) => <DeleteButton code={row.original.code} />,
+  }),
 ]);
 
 const emptyRows: LinkItem[] = []; // stable fallback: a new [] every render would reset the table
