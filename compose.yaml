@@ -3,9 +3,34 @@ services:
     image: mongo:8.2
     container_name: shortener-mongo
     ports:
-      - "127.0.0.1:27017:27017"
+      - "127.0.0.1:27017:27017"      # Compass on your laptop can still connect
     volumes:
-      - mongo-data:/data/db
+      - mongo-data:/data/db          # data survives restarts and rebuilds
+
+  backend:
+    build: ./backend
+    container_name: shortener-backend
+    profiles: ["full"]               # only starts with --profile full (run.ps1 does this)
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      SPRING_MONGODB_URI: mongodb://mongo:27017/shortener   # "mongo" = the service above
+      APP_BASEURL: http://localhost:8080
+      APP_FRONTENDORIGIN: http://localhost:3000
+    depends_on:
+      - mongo
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8080   # passed to ARG in frontend/Dockerfile
+    container_name: shortener-frontend
+    profiles: ["full"]
+    ports:
+      - "127.0.0.1:3000:80"          # laptop port 3000 → nginx's port 80 in the container
+    depends_on:
+      - backend
 
 volumes:
   mongo-data:
